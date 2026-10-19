@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Share Your Success Story - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link">About</a>
+                <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                <div class="language-switcher">
+                    <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
+                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
+                    <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="form-container testimonial-form">
+            <h2>Share Your Success Story</h2>
+            <p class="form-subtitle">Tell us how you found love on East African Hearts</p>
+
+            <form method="POST">
+                <div class="form-group">
+                    <label for="male_name">Partner 1 Name</label>
+                    <input type="text" id="male_name" name="male_name" placeholder="e.g., John" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="female_name">Partner 2 Name</label>
+                    <input type="text" id="female_name" name="female_name" placeholder="e.g., Sarah" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="country">Country</label>
+                    <select id="country" name="country" required>
+                        <option value="">Select Country</option>
+                        <option value="Kenya">Kenya</option>
+                        <option value="Uganda">Uganda</option>
+                        <option value="Tanzania">Tanzania</option>
+                        <option value="Rwanda">Rwanda</option>
+                        <option value="Ethiopia">Ethiopia</option>
+                        <option value="Somalia">Somalia</option>
+                        <option value="Burundi">Burundi</option>
+                        <option value="South Sudan">South Sudan</option>
+                        <option value="Mozambique">Mozambique</option>
+                        <option value="Malawi">Malawi</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="story">Your Love Story</label>
+                    <textarea id="story" name="story" placeholder="Share your beautiful journey together..." rows="6" required></textarea>
+                </div>
+
+                <button type="submit" class="btn-form">Share Our Story</button>
+            </form>
+
+            <p class="switch-link">
+                Back to <a href="{{ url_for('home.index') }}">home</a>
+            </p>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
+        </div>
+    </footer>
+</body>
+</html>

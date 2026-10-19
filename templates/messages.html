@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link">About</a>
+                <a href="{{ url_for('matching.discovery') }}" class="nav-link">Discovery</a>
+                <a href="{{ url_for('matching.matches') }}" class="nav-link">Matches</a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
+                <div class="language-switcher">
+                    <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
+                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
+                    <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="messages-container">
+            <div class="message-header">
+                <a href="{{ url_for('matching.matches') }}" class="back-link">← Back to Matches</a>
+                <div class="chat-with">
+                    <h2>{{ match_user.name }}</h2>
+                    <p class="user-info">{{ match_user.age }}, {{ match_user.location }}</p>
+                </div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="conversation">
+                {% if conversation %}
+                    {% for msg in conversation %}
+                        <div class="message {% if msg.sender_id == session.user_id %}message-sent{% else %}message-received{% endif %}">
+                            <p class="message-text">{{ msg.message_text }}</p>
+                            <p class="message-time">{{ msg.sent_at.strftime('%H:%M') if msg.sent_at else '' }}</p>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="no-messages">
+                        <p>No messages yet. Start the conversation!</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <form method="POST" action="{{ url_for('matching.send_message', receiver_id=match_user.id) }}" class="message-form">
+                <textarea name="message" placeholder="Type your message..." rows="3" required></textarea>
+                <button type="submit" class="btn-send">Send Message</button>
+            </form>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
+        </div>
+    </footer>
+
+    <script>
+        // Auto-scroll to latest message
+        const conversation = document.querySelector('.conversation');
+        if (conversation) {
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+    </script>
+</body>
+</html>

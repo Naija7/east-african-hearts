@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notifications - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link">About</a>
+                <a href="{{ url_for('matching.discovery') }}" class="nav-link">Discovery</a>
+                <a href="{{ url_for('matching.matches') }}" class="nav-link">Matches</a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="discovery-container">
+            <h1>Notifications</h1>
+            <p class="subtitle">{{ unread_count }} unread</p>
+
+            {% if notifications %}
+                <div class="notifications-list">
+                    {% for notif in notifications %}
+                        <div class="notification-item {% if not notif.read_status %}unread{% endif %}">
+                            <div class="notification-content">
+                                <strong>{{ notif.actor_name }}</strong>
+                                {% if notif.type == 'like' %}
+                                    liked your profile ❤️
+                                {% elif notif.type == 'match' %}
+                                    matched with you! 💕
+                                {% elif notif.type == 'message' %}
+                                    sent you a message 💬
+                                {% endif %}
+                            </div>
+                            <div class="notification-time">{{ notif.created_at.strftime('%b %d, %H:%M') if notif.created_at else '' }}</div>
+                            {% if not notif.read_status %}
+                                <form method="POST" action="{{ url_for('matching.mark_notification_read', notif_id=notif.id) }}" style="display: inline;">
+                                    <button type="submit" class="btn-small btn-mark-read">Mark as read</button>
+                                </form>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-profiles">
+                    <p>No notifications yet. Keep exploring! 🌟</p>
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
+    </footer>
+</body>
+</html>

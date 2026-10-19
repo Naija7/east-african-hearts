@@ -1,0 +1,110 @@
+"""Image optimization utilities for East African Hearts"""
+
+from PIL import Image
+import io
+import os
+from datetime import datetime
+import mysql.connector
+from dotenv import load_dotenv
+
+load_dotenv()
+
+def compress_image(image_file, max_width=600, max_height=600, quality=80):
+    """
+    Compress and resize image for optimal storage and performance
+
+    Args:
+        image_file: File object from form upload
+        max_width: Maximum width in pixels (default 600)
+        max_height: Maximum height in pixels (default 600)
+        quality: JPEG quality 1-100 (default 80)
+
+    Returns:
+        Compressed image bytes, or None if error
+    """
+    try:
+        # Open image
+        img = Image.open(image_file)
+
+        # Convert RGBA to RGB (for JPEG compatibility)
+        if img.mode in ('RGBA', 'LA', 'P'):
+            rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+            rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+            img = rgb_img
+
+        # Resize if needed (maintain aspect ratio)
+        img.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+
+        # Save to bytes with compression
+        img_byte_arr = io.BytesIO()
+        img.save(img_byte_arr, format='JPEG', quality=quality, optimize=True)
+        img_byte_arr.seek(0)
+
+        # Check size (max 2MB)
+        size_mb = len(img_byte_arr.getvalue()) / (1024 * 1024)
+        if size_mb > 2:
+            # Further compress if over 2MB
+            return compress_image(image_file, max_width=500, max_height=500, quality=70)
+
+        return img_byte_arr.getvalue()
+
+    except Exception as e:
+        print(f"Image compression error: {e}")
+        return None
+
+
+def get_image_size_mb(image_bytes):
+    """Get image size in MB"""
+    return len(image_bytes) / (1024 * 1024)
+
+
+def validate_image_file(file_obj, max_size_mb=5):
+    """
+    Validate image file before processing
+
+    Args:
+        file_obj: File object
+        max_size_mb: Maximum file size in MB
+
+    Returns:
+        (is_valid, error_message)
+    """
+    if not file_obj:
+        return True, None  # No file is ok (optional)
+
+    # Check file extension
+    ALLOWED_EXTENSIONS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
+    filename = file_obj.filename.lower()
+
+    if not any(filename.endswith('.' + ext) for ext in ALLOWED_EXTENSIONS):
+        return False, "Invalid file type. Allowed: JPG, PNG, GIF, WebP"
+
+    # Check file size
+    file_obj.seek(0, os.SEEK_END)
+    file_size_mb = file_obj.tell() / (1024 * 1024)
+    file_obj.seek(0)
+
+    if file_size_mb > max_size_mb:
+        return False, f"File too large. Max {max_size_mb}MB. Your file: {file_size_mb:.1f}MB"
+
+    return True, None
+
+
+def log_event(user_id, event_type, details=""):
+    try:
+        db = mysql.connector.connect(
+            host=os.getenv('DB_HOST'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            database=os.getenv('DB_NAME')
+        )
+        cursor = db.cursor()
+        cursor.execute("""
+            INSERT INTO logs (user_id, event_type, details, created_at)
+            VALUES (%s, %s, %s, %s)
+        """, (user_id, event_type, details, datetime.now()))
+        db.commit()
+        cursor.close()
+        db.close()
+    except Exception as e:
+        print(f"Log error: {e}")

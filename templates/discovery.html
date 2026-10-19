@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discovery - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link">About</a>
+                <a href="{{ url_for('matching.discovery') }}" class="nav-link active">Discovery</a>
+                <a href="{{ url_for('matching.matches') }}" class="nav-link">Matches</a>
+                <a href="{{ url_for('matching.notifications') }}" class="nav-link">
+                    🔔 Notifications <span class="notification-badge" id="unread-count"></span>
+                </a>
+                <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
+                <div class="language-switcher">
+                    <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
+                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
+                    <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="discovery-container">
+            <h1>Browse Profiles</h1>
+            <p class="subtitle">Find your perfect match</p>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <div class="search-filter-section">
+                <form method="GET" action="{{ url_for('matching.search') }}" class="search-form">
+                    <div class="filter-row">
+                        <div class="filter-group">
+                            <label for="age_min">Min Age</label>
+                            <input type="number" id="age_min" name="age_min" min="18" max="100" value="{{ age_min or '' }}" placeholder="18">
+                        </div>
+                        <div class="filter-group">
+                            <label for="age_max">Max Age</label>
+                            <input type="number" id="age_max" name="age_max" min="18" max="100" value="{{ age_max or '' }}" placeholder="100">
+                        </div>
+                        <div class="filter-group">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" name="location" value="{{ location or '' }}" placeholder="e.g., Nairobi">
+                        </div>
+                        <div class="filter-group">
+                            <label for="interests">Interests</label>
+                            <input type="text" id="interests" name="interests" value="{{ interests or '' }}" placeholder="e.g., Travel, Music">
+                        </div>
+                        <button type="submit" class="btn-search">🔍 Search</button>
+                        <a href="{{ url_for('matching.discovery') }}" class="btn-reset">Reset</a>
+                    </div>
+                </form>
+            </div>
+
+            {% if profiles %}
+                <div class="profiles-grid">
+                    {% for profile in profiles %}
+                        <div class="profile-card">
+                            <div class="profile-header">
+                                <h3>{{ profile.name }}</h3>
+                                <p class="age-location">{{ profile.age }}, {{ profile.location }}</p>
+                            </div>
+
+                            <div class="profile-info">
+                                {% if profile.bio %}
+                                    <p class="bio">{{ profile.bio[:100] }}{% if profile.bio|length > 100 %}...{% endif %}</p>
+                                {% else %}
+                                    <p class="bio-empty">No bio yet</p>
+                                {% endif %}
+
+                                {% if profile.interests %}
+                                    <div class="interests">
+                                        <strong>Interests:</strong>
+                                        <p>{{ profile.interests }}</p>
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="profile-actions">
+                                {% if profile.id in liked_users %}
+                                    <form method="POST" action="{{ url_for('matching.unlike_profile', liked_user_id=profile.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn-unlike">💔 Unlike</button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('matching.like_profile', liked_user_id=profile.id) }}" style="display: inline;">
+                                        <button type="submit" class="btn-like">❤️ Like</button>
+                                    </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-profiles">
+                    <p>No profiles available at the moment. Check back later!</p>
+                </div>
+            {% endif %}
+
+            {% if pagination %}
+                <div class="pagination">
+                    {% if pagination.has_prev %}
+                        <a href="{{ url_for('matching.search', page=pagination.prev_num, age_min=age_min, age_max=age_max, location=location, interests=interests) }}" class="btn-pagination">← Previous</a>
+                    {% endif %}
+
+                    <span class="pagination-info">Page {{ pagination.page }} of {{ pagination.total_pages }} ({{ pagination.total }} profiles)</span>
+
+                    {% if pagination.has_next %}
+                        <a href="{{ url_for('matching.search', page=pagination.next_num, age_min=age_min, age_max=age_max, location=location, interests=interests) }}" class="btn-pagination">Next →</a>
+                    {% endif %}
+                </div>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
+        </div>
+    </footer>
+
+    <script>
+        fetch("{{ url_for('matching.unread_notifications_count') }}")
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('unread-count');
+                if(data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline-block';
+                }
+            });
+    </script>
+</body>
+</html>

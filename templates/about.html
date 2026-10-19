@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">{{ t.home }}</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link active">{{ t.about }}</a>
+                <a href="{{ url_for('auth.login') }}" class="nav-link">{{ t.login }}</a>
+                <a href="{{ url_for('auth.register') }}" class="nav-link">{{ t.register }}</a>
+                <div class="language-switcher">
+                    <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
+                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
+                    <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <!-- Hero Section -->
+        <section class="about-hero">
+            <div class="about-hero-content">
+                <h1>{{ t.about_title }}</h1>
+                <p>Celebrating East African Love & Connection</p>
+            </div>
+        </section>
+
+        <!-- Mission Section -->
+        <section class="about-section">
+            <div class="about-container">
+                <div class="about-text">
+                    <h2>{{ t.mission }}</h2>
+                    <p>{{ t.mission_text }}</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why We Started -->
+        <section class="about-section alt-bg">
+            <div class="about-container">
+                <div class="about-text">
+                    <h2>{{ t.why_we_started }}</h2>
+                    <p>{{ t.why_text }}</p>
+                    <p style="margin-top: 1.5rem; font-style: italic; color: #667eea;">
+                        "East Africa is young, vibrant, and full of dreams. We're here to help those dreams of love come true."
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Vision Section -->
+        <section class="about-section">
+            <div class="about-container">
+                <div class="about-text">
+                    <h2>{{ t.vision }}</h2>
+                    <p>{{ t.vision_text }}</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Values Section -->
+        <section class="about-section alt-bg">
+            <div class="about-container">
+                <h2 style="text-align: center; margin-bottom: 3rem;">{{ t['values'] }}</h2>
+                <div class="values-grid">
+                    <div class="value-card">
+                        <h3>{{ t.authenticity }}</h3>
+                        <p>{{ t.authenticity_desc }}</p>
+                    </div>
+                    <div class="value-card">
+                        <h3>{{ t.inclusivity }}</h3>
+                        <p>{{ t.inclusivity_desc }}</p>
+                    </div>
+                    <div class="value-card">
+                        <h3>{{ t.respect }}</h3>
+                        <p>{{ t.respect_desc }}</p>
+                    </div>
+                    <div class="value-card">
+                        <h3>{{ t.empowerment }}</h3>
+                        <p>{{ t.empowerment_desc }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Why Different -->
+        <section class="about-section">
+            <div class="about-container">
+                <h2 style="text-align: center; margin-bottom: 3rem;">{{ t.why_different }}</h2>
+                <div class="reasons-grid">
+                    <div class="reason-card">
+                        <div class="reason-number">1</div>
+                        <h3>{{ t.reason1 }}</h3>
+                        <p>{{ t.reason1_desc }}</p>
+                    </div>
+                    <div class="reason-card">
+                        <div class="reason-number">2</div>
+                        <h3>{{ t.reason2 }}</h3>
+                        <p>{{ t.reason2_desc }}</p>
+                    </div>
+                    <div class="reason-card">
+                        <div class="reason-number">3</div>
+                        <h3>{{ t.reason3 }}</h3>
+                        <p>{{ t.reason3_desc }}</p>
+                    </div>
+                    <div class="reason-card">
+                        <div class="reason-number">4</div>
+                        <h3>{{ t.reason4 }}</h3>
+                        <p>{{ t.reason4_desc }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Impact Stats -->
+        <section class="about-section alt-bg">
+            <div class="about-container">
+                <h2 style="text-align: center; margin-bottom: 3rem;">{{ t.stats }}</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value">5,000+</div>
+                        <div class="stat-label">{{ t.users_connected }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">92%</div>
+                        <div class="stat-label">{{ t.success_rate }}</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">8</div>
+                        <div class="stat-label">{{ t.countries }}</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section class="about-cta">
+            <h2>Ready to Find Your Perfect Match?</h2>
+            <p>Join thousands of East African singles who are already connecting</p>
+            <a href="{{ url_for('auth.register') }}" class="btn btn-large">{{ t.join_free }}</a>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
+        <div class="footer-links">
+            <a href="{{ url_for('home.about') }}">{{ t.about }}</a>
+            <a href="#">Privacy Policy</a>
+            <a href="#">Terms of Service</a>
+            <a href="#">Contact Us</a>
+        </div>
+    </footer>
+</body>
+</html>

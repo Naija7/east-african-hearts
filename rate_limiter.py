@@ -4,7 +4,6 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
 from datetime import datetime, timedelta
-import redis
 import os
 from dotenv import load_dotenv
 

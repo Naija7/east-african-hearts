@@ -24,14 +24,16 @@ init_email(app)
 # ---------------------------
 # DATABASE CONNECTION SECTION
 # ---------------------------
-db = mysql.connector.connect(
-    host=os.getenv('DB_HOST'),
-    user=os.getenv('DB_USER'),
-    password=os.getenv('DB_PASSWORD'),
-    database=os.getenv('DB_NAME')
-)
+def get_db_connection():
+    return mysql.connector.connect(
+        host=os.getenv('DB_HOST'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        database=os.getenv('DB_NAME')
+    )
 
-cursor = db.cursor()
+db = None
+cursor = None
 # ---------------------------
 
 # Register Blueprints
@@ -42,4 +44,5 @@ app.register_blueprint(matching)
 
 if __name__ == "__main__":
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
-    app.run(host='127.0.0.1', debug=debug_mode)
+    port = int(os.getenv('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

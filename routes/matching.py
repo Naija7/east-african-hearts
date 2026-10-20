@@ -60,8 +60,9 @@ def discovery():
     user_id = session['user_id']
     language = session.get('language', 'en')
 
-    # Check cache (5 minute TTL)
-    if _cache['data'] and _cache['timestamp'] and datetime.now() - _cache['timestamp'] < timedelta(minutes=5):
+    # Check cache (30 second TTL). The cache holds ALL users; the viewer is
+    # filtered out per request so one user's id never shapes everyone's list.
+    if _cache['data'] and _cache['timestamp'] and datetime.now() - _cache['timestamp'] < timedelta(seconds=30):
         profiles = _cache['data']
     else:
         cursor = db.cursor(dictionary=True)
@@ -69,16 +70,17 @@ def discovery():
             SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location
             FROM users u
             LEFT JOIN profiles p ON u.id = p.user_id
-            WHERE u.id != %s
             ORDER BY u.created_at DESC
-            LIMIT 50
-        """, (user_id,))
+            LIMIT 200
+        """)
         profiles = cursor.fetchall()
         cursor.close()
 
         # Cache the results
         _cache['data'] = profiles
         _cache['timestamp'] = datetime.now()
+
+    profiles = [p for p in profiles if p['id'] != user_id][:50]
 
     # Get user's likes
     cursor = db.cursor(dictionary=True)

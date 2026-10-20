@@ -13,6 +13,9 @@ from email_sender import init_email
 load_dotenv()
 
 app = Flask(__name__)
+# Behind Railway's proxy: use the real client IP (needed for per-IP rate limits)
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', 'default-secret-key-change-this')
 
 # Initialize rate limiter

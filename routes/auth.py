@@ -56,7 +56,7 @@ def login():
     return render_template("login.html")
 
 @auth.route("/register", methods=["GET", "POST"])
-@limiter.limit("1 per hour")
+@limiter.limit("10 per hour", methods=["POST"])
 def register():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -121,7 +121,7 @@ def register():
             photo_file = request.files['photo']
             if photo_file.filename != '':
                 # Validate image
-                is_valid, error_msg = validate_image_file(photo_file, max_size_mb=5)
+                is_valid, error_msg = validate_image_file(photo_file, max_size_mb=15)
                 if not is_valid:
                     flash(error_msg, "error")
                     return redirect(url_for('auth.register'))

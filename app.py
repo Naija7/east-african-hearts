@@ -24,6 +24,10 @@ limiter.init_app(app)
 # Initialize email
 init_email(app)
 
+# Create tables if missing
+from db_init import init_db
+init_db()
+
 # ---------------------------
 # DATABASE CONNECTION SECTION
 # ---------------------------

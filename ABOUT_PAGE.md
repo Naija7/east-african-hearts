@@ -3,7 +3,7 @@
 ## What's New
 
 ✅ **Complete About Section** - Compelling story about why East African Hearts exists  
-✅ **Multi-Language Support** - English, Kinyarwanda, and Swahili  
+✅ **Multi-Language Support** - English and Swahili  
 ✅ **Professional Design** - Hero section, mission, vision, values, and impact stats  
 ✅ **Fully Responsive** - Works on all devices
 

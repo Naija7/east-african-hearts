@@ -20,7 +20,6 @@
                 <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
                 <div class="language-switcher">
                     <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
-                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
                     <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
                 </div>
             </nav>

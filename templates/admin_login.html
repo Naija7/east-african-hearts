@@ -18,7 +18,6 @@
                 <a href="{{ url_for('auth.login') }}" class="nav-link">User Login</a>
                 <div class="language-switcher">
                     <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>
-                    <a href="{{ url_for('home.set_language', language='rw') }}" class="lang-btn {% if lang == 'rw' %}active{% endif %}">RW</a>
                     <a href="{{ url_for('home.set_language', language='sw') }}" class="lang-btn {% if lang == 'sw' %}active{% endif %}">SW</a>
                 </div>
             </nav>

@@ -33,6 +33,7 @@
             <p class="form-subtitle">Tell us how you found love on East African Hearts</p>
 
             <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="form-group">
                     <label for="male_name">Partner 1 Name</label>
                     <input type="text" id="male_name" name="male_name" placeholder="e.g., John" required>

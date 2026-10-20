@@ -62,6 +62,7 @@
             </div>
 
             <form method="POST" action="{{ url_for('matching.send_message', receiver_id=match_user.id) }}" class="message-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <textarea name="message" placeholder="Type your message..." rows="3" required></textarea>
                 <button type="submit" class="btn-send">Send Message</button>
             </form>

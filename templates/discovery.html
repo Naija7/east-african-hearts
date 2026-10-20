@@ -96,10 +96,12 @@
                             <div class="profile-actions">
                                 {% if profile.id in liked_users %}
                                     <form method="POST" action="{{ url_for('matching.unlike_profile', liked_user_id=profile.id) }}" style="display: inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn-unlike">💔 Unlike</button>
                                     </form>
                                 {% else %}
                                     <form method="POST" action="{{ url_for('matching.like_profile', liked_user_id=profile.id) }}" style="display: inline;">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                         <button type="submit" class="btn-like">❤️ Like</button>
                                     </form>
                                 {% endif %}

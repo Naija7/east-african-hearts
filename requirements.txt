@@ -5,4 +5,5 @@ Werkzeug==2.3.0
 Pillow==12.0.0
 Flask-Limiter==4.1.1
 Flask-Mail==0.9.1
+Flask-WTF==1.2.1
 gunicorn==21.2.0

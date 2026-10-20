@@ -9,6 +9,45 @@ load_dotenv()
 mail = Mail()
 
 
+def _deliver(app, email, subject, html, text):
+    """Send via Resend's HTTPS API when RESEND_API_KEY is set (works where
+    outbound SMTP is blocked, no personal mailbox needed); else Flask-Mail."""
+    api_key = os.getenv('RESEND_API_KEY')
+    if api_key:
+        import json
+        import urllib.request
+        sender = os.getenv('MAIL_DEFAULT_SENDER', 'East African Hearts <onboarding@resend.dev>')
+        payload = {'from': sender, 'to': [email], 'subject': subject, 'html': html}
+        if text:
+            payload['text'] = text
+        req = urllib.request.Request(
+            'https://api.resend.com/emails',
+            data=json.dumps(payload).encode(),
+            headers={'Authorization': f'Bearer {api_key}',
+                     'Content-Type': 'application/json'},
+            method='POST')
+        urllib.request.urlopen(req, timeout=15).read()
+    else:
+        with app.app_context():
+            mail.send(Message(subject=subject, recipients=[email], html=html, body=text))
+
+
+def _send_async(email, subject, html, text):
+    """Send in a background thread so the request returns immediately.
+    Failures are logged, not raised (users can use "resend verification")."""
+    import threading
+    from flask import current_app
+    app = current_app._get_current_object()
+
+    def run():
+        try:
+            _deliver(app, email, subject, html, text)
+        except Exception as e:
+            print(f"Error sending email: {e}")
+
+    threading.Thread(target=run, daemon=True).start()
+
+
 def init_email(app):
     """Initialize Flask-Mail with app"""
     # Configure email settings
@@ -91,13 +130,7 @@ def send_verification_email(email, name, verification_link):
     """
 
     try:
-        msg = Message(
-            subject=subject,
-            recipients=[email],
-            html=html_body,
-            body=text_body
-        )
-        mail.send(msg)
+        _send_async(email, subject, html_body, text_body)
         return True, None
     except Exception as e:
         print(f"Error sending email: {e}")
@@ -143,12 +176,7 @@ def send_resend_verification_email(email, name, verification_link):
     """
 
     try:
-        msg = Message(
-            subject=subject,
-            recipients=[email],
-            html=html_body
-        )
-        mail.send(msg)
+        _send_async(email, subject, html_body, None)
         return True, None
     except Exception as e:
         print(f"Error sending email: {e}")

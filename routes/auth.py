@@ -162,6 +162,14 @@ def register():
             cursor.execute(profile_sql, profile_values)
             db.commit()
 
+            # Email verification is off unless EMAIL_VERIFICATION_ENABLED=true
+            if os.getenv('EMAIL_VERIFICATION_ENABLED', 'false').lower() != 'true':
+                cursor.execute("UPDATE users SET email_verified = 1 WHERE id = %s", (user_id,))
+                db.commit()
+                cursor.close()
+                flash("Registration successful! You can now log in.", "success")
+                return redirect(url_for('auth.login'))
+
             # Create verification token and send email
             token = create_verification_token(user_id, db)
             if token:

@@ -9,29 +9,21 @@ load_dotenv()
 mail = Mail()
 
 
-def _send_with_timeout(msg, timeout=8):
-    """Send in a thread so a blocked SMTP connection can't hang the request
-    past gunicorn's worker timeout. Raises on failure or timeout."""
+def _send_async(msg):
+    """Send in a background thread so the request returns immediately.
+    Failures are logged, not raised (users can use "resend verification")."""
     import threading
     from flask import current_app
     app = current_app._get_current_object()
-    result = {}
 
     def run():
         try:
             with app.app_context():
                 mail.send(msg)
-            result['ok'] = True
         except Exception as e:
-            result['err'] = e
+            print(f"Error sending email: {e}")
 
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
-    t.join(timeout)
-    if t.is_alive():
-        raise TimeoutError(f"SMTP send timed out after {timeout}s")
-    if 'err' in result:
-        raise result['err']
+    threading.Thread(target=run, daemon=True).start()
 
 
 def init_email(app):
@@ -122,7 +114,7 @@ def send_verification_email(email, name, verification_link):
             html=html_body,
             body=text_body
         )
-        _send_with_timeout(msg)
+        _send_async(msg)
         return True, None
     except Exception as e:
         print(f"Error sending email: {e}")
@@ -173,7 +165,7 @@ def send_resend_verification_email(email, name, verification_link):
             recipients=[email],
             html=html_body
         )
-        _send_with_timeout(msg)
+        _send_async(msg)
         return True, None
     except Exception as e:
         print(f"Error sending email: {e}")

@@ -12,7 +12,7 @@ A production-ready dating platform built for 5,000+ East African users with adva
 - ✅ **Testimonials** - Admin-approved success stories from real couples
 
 ### Advanced Features
-- ✅ **Multi-Language Support** - English, Kinyarwanda, Swahili
+- ✅ **Multi-Language Support** - English, Swahili
 - ✅ **Real-Time Notifications** - Alerts for likes, matches, and messages
 - ✅ **Event Logging** - Complete audit trail of user actions
 - ✅ **Performance Caching** - Optimized for 5,000+ concurrent users

@@ -27,16 +27,16 @@ def _parse_mysql_url(url):
 
 def _get_connection_params():
     """Get connection parameters from Railway URL or individual env vars."""
-    mysql_url = os.getenv('MYSQL_PRIVATE_URL')
+    mysql_url = os.getenv('MYSQL_URL')
     if mysql_url:
         return _parse_mysql_url(mysql_url)
 
     return {
-        'host': os.getenv('DB_HOST'),
-        'user': os.getenv('DB_USER'),
-        'password': os.getenv('DB_PASSWORD'),
-        'database': os.getenv('DB_NAME'),
-        'port': int(os.getenv('DB_PORT', 3306))
+        'host': os.getenv('DB_HOST') or os.getenv('MYSQL_HOST'),
+        'user': os.getenv('DB_USER') or os.getenv('MYSQL_USER'),
+        'password': os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD'),
+        'database': os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE'),
+        'port': int(os.getenv('DB_PORT') or os.getenv('MYSQL_PORT', 3306))
     }
 
 

@@ -35,6 +35,7 @@ def create_verification_token(user_id, db):
         return token
     except Exception as e:
         print(f"Error creating verification token: {e}")
+        db.rollback()
         cursor.close()
         return None
 
@@ -56,20 +57,20 @@ def verify_token(token, db):
         result = cursor.fetchone()
 
         if not result:
+            cursor.close()
             return False, None, "Invalid or expired token"
 
         if datetime.fromisoformat(result['expires_at'].isoformat()) < datetime.now():
             # Delete expired token
             cursor.execute("DELETE FROM email_verifications WHERE token = %s", (token,))
             db.commit()
+            cursor.close()
             return False, None, "Token has expired"
 
         user_id = result['user_id']
 
         # Mark email as verified
         cursor.execute("UPDATE users SET email_verified = TRUE WHERE id = %s", (user_id,))
-        db.commit()
-
         # Delete used token
         cursor.execute("DELETE FROM email_verifications WHERE token = %s", (token,))
         db.commit()
@@ -79,6 +80,7 @@ def verify_token(token, db):
 
     except Exception as e:
         print(f"Error verifying token: {e}")
+        db.rollback()
         cursor.close()
         return False, None, str(e)
 
@@ -106,12 +108,170 @@ def resend_verification_token(user_id, db):
         # Delete old token
         cursor.execute("DELETE FROM email_verifications WHERE user_id = %s", (user_id,))
         db.commit()
-
-        # Create new token
         cursor.close()
         return create_verification_token(user_id, db)
 
     except Exception as e:
         print(f"Error resending token: {e}")
+        db.rollback()
         cursor.close()
         return None
+
+
+# ----------------------------------------------------
+# PASSWORD RESET TOKEN MANAGEMENT
+# ----------------------------------------------------
+def create_password_reset_token(user_id, db):
+    """
+    Generate and store password reset token for user (valid for 1 hour).
+    Deletes any existing tokens for that user.
+    """
+    token = generate_verification_token(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM password_resets WHERE user_id = %s", (user_id,))
+        cursor.execute("""
+            INSERT INTO password_resets (user_id, token, expires_at)
+            VALUES (%s, %s, %s)
+        """, (user_id, token, expires_at))
+        db.commit()
+        cursor.close()
+        return token
+    except Exception as e:
+        print(f"Error creating password reset token: {e}")
+        db.rollback()
+        cursor.close()
+        return None
+
+
+def verify_password_reset_token(token, db):
+    """
+    Verify password reset token.
+    Returns: (is_valid, user_id, error_message)
+    """
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT user_id, expires_at FROM password_resets
+            WHERE token = %s
+        """, (token,))
+        record = cursor.fetchone()
+
+        if not record:
+            cursor.close()
+            return False, None, "Invalid or expired reset link"
+
+        if record['expires_at'] < datetime.now():
+            cursor.execute("DELETE FROM password_resets WHERE token = %s", (token,))
+            db.commit()
+            cursor.close()
+            return False, None, "Reset link has expired"
+
+        user_id = record['user_id']
+        cursor.close()
+        return True, user_id, None
+    except Exception as e:
+        print(f"Error checking password reset token: {e}")
+        db.rollback()
+        cursor.close()
+        return False, None, str(e)
+
+
+def complete_password_reset(user_id, new_password_hash, db):
+    """
+    Update password and invalidate all reset tokens for this user.
+    """
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_password_hash, user_id))
+        cursor.execute("DELETE FROM password_resets WHERE user_id = %s", (user_id,))
+        db.commit()
+        cursor.close()
+        return True
+    except Exception as e:
+        print(f"Error completing password reset: {e}")
+        db.rollback()
+        cursor.close()
+        return False
+
+
+# ----------------------------------------------------
+# PASSWORD RESET TOKEN MANAGEMENT
+# ----------------------------------------------------
+def create_password_reset_token(user_id, db):
+    """
+    Generate and store password reset token for user (valid for 1 hour).
+    Deletes any existing tokens for that user.
+    """
+    token = generate_verification_token(32)
+    expires_at = datetime.now() + timedelta(hours=1)
+
+    cursor = db.cursor()
+    try:
+        cursor.execute("DELETE FROM password_resets WHERE user_id = %s", (user_id,))
+        cursor.execute("""
+            INSERT INTO password_resets (user_id, token, expires_at)
+            VALUES (%s, %s, %s)
+        """, (user_id, token, expires_at))
+        db.commit()
+        cursor.close()
+        return token
+    except Exception as e:
+        print(f"Error creating password reset token: {e}")
+        db.rollback()
+        cursor.close()
+        return None
+
+
+def verify_password_reset_token(token, db):
+    """
+    Verify password reset token.
+    Returns: (is_valid, user_id, error_message)
+    """
+    cursor = db.cursor(dictionary=True)
+    try:
+        cursor.execute("""
+            SELECT user_id, expires_at FROM password_resets
+            WHERE token = %s
+        """, (token,))
+        record = cursor.fetchone()
+
+        if not record:
+            cursor.close()
+            return False, None, "Invalid or expired reset link"
+
+        if record['expires_at'] < datetime.now():
+            cursor.execute("DELETE FROM password_resets WHERE token = %s", (token,))
+            db.commit()
+            cursor.close()
+            return False, None, "Reset link has expired"
+
+        user_id = record['user_id']
+        cursor.close()
+        return True, user_id, None
+    except Exception as e:
+        print(f"Error checking password reset token: {e}")
+        db.rollback()
+        cursor.close()
+        return False, None, str(e)
+
+
+def complete_password_reset(user_id, new_password_hash, db):
+    """
+    Update password and invalidate all reset tokens for this user.
+    """
+    cursor = db.cursor()
+    try:
+        cursor.execute("UPDATE users SET password_hash = %s WHERE id = %s", (new_password_hash, user_id))
+        cursor.execute("DELETE FROM password_resets WHERE user_id = %s", (user_id,))
+        db.commit()
+        cursor.close()
+        return True
+    except Exception as e:
+        print(f"Error completing password reset: {e}")
+        db.rollback()
+        cursor.close()
+        return False
+

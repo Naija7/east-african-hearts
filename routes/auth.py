@@ -1,6 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash, check_password_hash
-import mysql.connector
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
@@ -9,24 +8,23 @@ from validators import (validate_email, validate_password, validate_name,
                        validate_age, validate_location, validate_bio,
                        validate_interests, validate_message)
 from rate_limiter import limiter
-from email_verification import create_verification_token, verify_token
-from email_sender import send_verification_email, send_resend_verification_email
+from email_verification import (create_verification_token, verify_token,
+                                generate_verification_token,
+                                create_password_reset_token,
+                                verify_password_reset_token,
+                                complete_password_reset)
+from email_sender import (send_verification_email, send_resend_verification_email,
+                          send_password_reset_email, send_admin_password_reset_email)
+from db import get_db
 
 # Load environment variables
 load_dotenv()
 
 auth = Blueprint('auth', __name__)
 
-# Database connection
-db = mysql.connector.connect(
-    host=os.getenv('DB_HOST'),
-    user=os.getenv('DB_USER'),
-    password=os.getenv('DB_PASSWORD'),
-    database=os.getenv('DB_NAME')
-)
 
 @auth.route("/login", methods=["GET", "POST"])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("10 per 15 minutes", methods=["POST"])
 def login():
     if request.method == "POST":
         email = request.form.get("email", "").strip()
@@ -38,12 +36,21 @@ def login():
             flash(error, "error")
             return redirect(url_for('auth.login'))
 
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
         cursor.close()
 
         if user and check_password_hash(user['password_hash'], password):
+            # Enforce email verification if enabled in configuration
+            verification_enabled = os.getenv('EMAIL_VERIFICATION_ENABLED', 'false').lower() == 'true'
+            if verification_enabled and not user.get('email_verified'):
+                flash("Please verify your email address before logging in. If needed, request a new link below.", "warning")
+                return redirect(url_for('auth.resend_verification'))
+
+            # Prevent session fixation
+            session.clear()
             session['user_id'] = user['id']
             session['email'] = user['email']
             session['name'] = user.get('full_name', 'User')
@@ -54,6 +61,7 @@ def login():
             flash("Invalid email or password", "error")
 
     return render_template("login.html")
+
 
 @auth.route("/register", methods=["GET", "POST"])
 @limiter.limit("10 per hour", methods=["POST"])
@@ -69,47 +77,39 @@ def register():
         interests = request.form.get("interests", "").strip()
 
         # VALIDATION CHECKS
-        # Validate name
         is_valid, error = validate_name(name)
         if not is_valid:
             flash(f"Name: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate email
         is_valid, error = validate_email(email)
         if not is_valid:
             flash(f"Email: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate password
         is_valid, error = validate_password(password)
         if not is_valid:
             flash(f"Password: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Check password confirmation
         if password != password_confirm:
             flash("Passwords do not match", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate gender
         if gender not in ['Male', 'Female', 'Other']:
             flash("Invalid gender selection", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate age
         is_valid, error = validate_age(age)
         if not is_valid:
             flash(f"Age: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate location
         is_valid, error = validate_location(location)
         if not is_valid:
             flash(f"Location: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Validate interests
         is_valid, error = validate_interests(interests)
         if not is_valid:
             flash(f"Interests: {error}", "error")
@@ -120,13 +120,11 @@ def register():
         if 'photo' in request.files:
             photo_file = request.files['photo']
             if photo_file.filename != '':
-                # Validate image
                 is_valid, error_msg = validate_image_file(photo_file, max_size_mb=15)
                 if not is_valid:
                     flash(error_msg, "error")
                     return redirect(url_for('auth.register'))
 
-                # Compress image
                 photo_binary = compress_image(photo_file, max_width=600, max_height=600, quality=80)
                 if photo_binary is None:
                     flash("Error processing image. Please try again.", "error")
@@ -135,6 +133,7 @@ def register():
                 size_mb = get_image_size_mb(photo_binary)
                 print(f"Image compressed: {size_mb:.2f}MB")
 
+        db = get_db()
         cursor = db.cursor()
 
         # Check if email already exists
@@ -144,31 +143,29 @@ def register():
             cursor.close()
             return redirect(url_for('auth.register'))
 
-        # Hash password
         hashed_password = generate_password_hash(password)
 
         try:
-            # Insert user
+            # Atomic transaction: Insert user and profile together
             sql = "INSERT INTO users (full_name, email, password_hash, gender, age) VALUES (%s, %s, %s, %s, %s)"
             values = (name, email, hashed_password, gender, age)
             cursor.execute(sql, values)
-            db.commit()
-
             user_id = cursor.lastrowid
 
-            # Create profile with compressed photo
             profile_sql = "INSERT INTO profiles (user_id, bio, interests, location, profile_picture) VALUES (%s, %s, %s, %s, %s)"
             profile_values = (user_id, "", interests, location, photo_binary)
             cursor.execute(profile_sql, profile_values)
-            db.commit()
 
-            # Email verification is off unless EMAIL_VERIFICATION_ENABLED=true
-            if os.getenv('EMAIL_VERIFICATION_ENABLED', 'false').lower() != 'true':
+            # Email verification check
+            verification_enabled = os.getenv('EMAIL_VERIFICATION_ENABLED', 'false').lower() == 'true'
+            if not verification_enabled:
                 cursor.execute("UPDATE users SET email_verified = 1 WHERE id = %s", (user_id,))
                 db.commit()
                 cursor.close()
                 flash("Registration successful! You can now log in.", "success")
                 return redirect(url_for('auth.login'))
+
+            db.commit()
 
             # Create verification token and send email
             token = create_verification_token(user_id, db)
@@ -176,12 +173,11 @@ def register():
                 app_url = os.getenv('APP_URL', 'http://127.0.0.1:5000')
                 verification_link = f"{app_url}/verify-email/{token}"
                 success, error = send_verification_email(email, name, verification_link)
-
                 if success:
                     flash("Registration successful! Please check your email to verify your account.", "success")
                 else:
-                    print(f"Warning: Email not sent: {error}")
-                    flash("Registration successful! Note: We couldn't send verification email. Try resending later.", "warning")
+                    print(f"Warning: Verification email could not be queued: {error}")
+                    flash("Registration successful! You may need to resend verification if email doesn't arrive.", "warning")
             else:
                 flash("Registration successful! Please check your email to verify your account.", "success")
 
@@ -189,11 +185,13 @@ def register():
             return redirect(url_for('auth.login'))
 
         except Exception as e:
+            db.rollback()
             print(f"Registration Error: {e}")
             flash("Registration failed. Please try again.", "error")
             cursor.close()
 
     return render_template("register.html")
+
 
 @auth.route("/logout")
 def logout():
@@ -201,19 +199,98 @@ def logout():
     flash("Logged out successfully", "success")
     return redirect(url_for('home.index'))
 
+
+# ----------------------------------------------------
+# USER PASSWORD RESET ROUTES
+# ----------------------------------------------------
+@auth.route("/forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per hour", methods=["POST"])
+def forgot_password():
+    """Request password reset link for user account"""
+    if request.method == "POST":
+        email = request.form.get("email", "").strip()
+
+        is_valid, error = validate_email(email)
+        if not is_valid:
+            flash(f"Email: {error}", "error")
+            return redirect(url_for('auth.forgot_password'))
+
+        db = get_db()
+        cursor = db.cursor(dictionary=True)
+        cursor.execute("SELECT id, full_name, email FROM users WHERE email = %s", (email,))
+        user = cursor.fetchone()
+        cursor.close()
+
+        # Send reset email if user exists (generic message to avoid email enumeration)
+        if user:
+            token = create_password_reset_token(user['id'], db)
+            if token:
+                app_url = os.getenv('APP_URL', 'http://127.0.0.1:5000').rstrip('/')
+                reset_link = f"{app_url}/reset-password/{token}"
+                send_password_reset_email(user['email'], user['full_name'], reset_link)
+                log_event(user['id'], 'PASSWORD_RESET_REQUESTED', f"Reset requested from {request.remote_addr}")
+
+        flash("If an account exists with that email, we have sent a password reset link.", "info")
+        return redirect(url_for('auth.login'))
+
+    return render_template("forgot_password.html")
+
+
+@auth.route("/reset-password/<token>", methods=["GET", "POST"])
+@limiter.limit("10 per hour", methods=["POST"])
+def reset_password(token):
+    """Set new password using verified reset token"""
+    db = get_db()
+    is_valid, user_id, error = verify_password_reset_token(token, db)
+
+    if not is_valid:
+        flash(error or "Invalid or expired password reset link.", "error")
+        return redirect(url_for('auth.login'))
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+        password_confirm = request.form.get("password_confirm", "")
+
+        is_valid_pw, error_pw = validate_password(password)
+        if not is_valid_pw:
+            flash(f"Password: {error_pw}", "error")
+            return redirect(url_for('auth.reset_password', token=token))
+
+        if password != password_confirm:
+            flash("Passwords do not match", "error")
+            return redirect(url_for('auth.reset_password', token=token))
+
+        hashed_password = generate_password_hash(password)
+        success = complete_password_reset(user_id, hashed_password, db)
+
+        if success:
+            log_event(user_id, 'PASSWORD_RESET_SUCCESS', f"Password reset from {request.remote_addr}")
+            flash("Password reset successfully! You can now log in.", "success")
+            return redirect(url_for('auth.login'))
+        else:
+            flash("Failed to update password. Please try again.", "error")
+
+    return render_template("reset_password.html", token=token)
+
+
+# ----------------------------------------------------
+# ADMIN AUTH & MANAGEMENT
+# ----------------------------------------------------
 @auth.route("/admin-login", methods=["GET", "POST"])
-@limiter.limit("5 per 15 minutes")
+@limiter.limit("10 per 15 minutes", methods=["POST"])
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
 
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, password_hash FROM admin_users WHERE username = %s", (username,))
         admin_user = cursor.fetchone()
         cursor.close()
 
         if admin_user and check_password_hash(admin_user['password_hash'], password):
+            session.clear()
             session['admin'] = True
             session['admin_id'] = admin_user['id']
             session['admin_name'] = username
@@ -226,18 +303,21 @@ def admin_login():
 
     return render_template("admin_login.html")
 
+
 @auth.route("/admin-forgot-password", methods=["GET", "POST"])
+@limiter.limit("5 per hour", methods=["POST"])
 def admin_forgot_password():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
 
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, email FROM admin_users WHERE username = %s", (username,))
         admin_user = cursor.fetchone()
         cursor.close()
 
         if admin_user:
-            reset_token = create_verification_token(length=32)
+            reset_token = generate_verification_token(32)
             expires_at = datetime.now() + timedelta(hours=1)
 
             try:
@@ -249,19 +329,25 @@ def admin_forgot_password():
                 db.commit()
                 cursor.close()
 
-                reset_link = f"https://yoursite.com/admin-reset-password/{reset_token}"
+                app_url = os.getenv('APP_URL', 'http://127.0.0.1:5000').rstrip('/')
+                reset_link = f"{app_url}/admin-reset-password/{reset_token}"
+                send_admin_password_reset_email(admin_user['email'], username, reset_link)
+
                 flash(f"Password reset link sent to {admin_user['email']}", "success")
                 log_event(admin_user['id'], 'ADMIN_PASSWORD_RESET_REQUESTED', username)
             except Exception as e:
+                db.rollback()
                 flash("Error processing request. Please try again.", "error")
-                print(f"Error: {e}")
+                print(f"Admin reset request error: {e}")
         else:
             flash("Admin account not found", "error")
 
     return render_template("admin_forgot_password.html")
 
+
 @auth.route("/admin-reset-password/<token>", methods=["GET", "POST"])
 def admin_reset_password(token):
+    db = get_db()
     cursor = db.cursor(dictionary=True)
     cursor.execute("""
         SELECT admin_id FROM admin_password_resets
@@ -293,25 +379,28 @@ def admin_reset_password(token):
             cursor = db.cursor()
             cursor.execute("UPDATE admin_users SET password_hash = %s WHERE id = %s",
                           (hashed_password, reset_record['admin_id']))
-            cursor.execute("DELETE FROM admin_password_resets WHERE token = %s", (token,))
+            cursor.execute("DELETE FROM admin_password_resets WHERE admin_id = %s", (reset_record['admin_id'],))
             db.commit()
             cursor.close()
 
-            log_event(reset_record['admin_id'], 'ADMIN_PASSWORD_RESET_SUCCESS', "Password reset")
+            log_event(reset_record['admin_id'], 'ADMIN_PASSWORD_RESET_SUCCESS', "Admin password reset")
             flash("Password reset successfully. Please login.", "success")
             return redirect(url_for('auth.admin_login'))
         except Exception as e:
+            db.rollback()
             flash("Error resetting password", "error")
-            print(f"Error: {e}")
+            print(f"Error resetting admin password: {e}")
 
     return render_template("admin_reset_password.html", token=token)
 
+
 @auth.route("/admin-panel")
 def admin_panel():
-    if 'admin' not in session:
+    if not session.get('admin'):
         flash("Please login as admin first", "error")
         return redirect(url_for('auth.admin_login'))
 
+    db = get_db()
     cursor = db.cursor(dictionary=True)
 
     # Get stats
@@ -336,11 +425,13 @@ def admin_panel():
                          approved_testimonials=approved_testimonials,
                          testimonials=testimonials)
 
-@auth.route("/admin-approve-testimonial/<int:testimonial_id>")
+
+@auth.route("/admin-approve-testimonial/<int:testimonial_id>", methods=["GET", "POST"])
 def approve_testimonial(testimonial_id):
-    if 'admin' not in session:
+    if not session.get('admin'):
         return redirect(url_for('auth.admin_login'))
 
+    db = get_db()
     cursor = db.cursor()
     cursor.execute("UPDATE testimonials SET status = 'approved' WHERE id = %s", (testimonial_id,))
     db.commit()
@@ -349,11 +440,13 @@ def approve_testimonial(testimonial_id):
     flash("Testimonial approved", "success")
     return redirect(url_for('auth.admin_panel'))
 
-@auth.route("/admin-reject-testimonial/<int:testimonial_id>")
+
+@auth.route("/admin-reject-testimonial/<int:testimonial_id>", methods=["GET", "POST"])
 def reject_testimonial(testimonial_id):
-    if 'admin' not in session:
+    if not session.get('admin'):
         return redirect(url_for('auth.admin_login'))
 
+    db = get_db()
     cursor = db.cursor()
     cursor.execute("UPDATE testimonials SET status = 'rejected' WHERE id = %s", (testimonial_id,))
     db.commit()
@@ -362,14 +455,19 @@ def reject_testimonial(testimonial_id):
     flash("Testimonial rejected", "success")
     return redirect(url_for('auth.admin_panel'))
 
+
 @auth.route("/admin-logout")
 def admin_logout():
     session.pop('admin', None)
     session.pop('admin_name', None)
+    session.pop('admin_id', None)
     flash("Admin logged out", "success")
     return redirect(url_for('auth.admin_login'))
 
 
+# ----------------------------------------------------
+# EMAIL VERIFICATION
+# ----------------------------------------------------
 @auth.route("/verify-email/<token>")
 def verify_email(token):
     """Verify email with token"""
@@ -377,6 +475,7 @@ def verify_email(token):
         flash("Invalid verification link", "error")
         return redirect(url_for('auth.login'))
 
+    db = get_db()
     success, user_id, error = verify_token(token, db)
 
     if success:
@@ -388,18 +487,18 @@ def verify_email(token):
 
 
 @auth.route("/resend-verification", methods=["GET", "POST"])
-@limiter.limit("3 per hour")
+@limiter.limit("3 per hour", methods=["POST"])
 def resend_verification():
     """Resend verification email"""
     if request.method == "POST":
         email = request.form.get("email", "").strip()
 
-        # Validate email
         is_valid, error = validate_email(email)
         if not is_valid:
             flash(f"Email: {error}", "error")
             return redirect(url_for('auth.resend_verification'))
 
+        db = get_db()
         cursor = db.cursor(dictionary=True)
         cursor.execute("SELECT id, full_name, email_verified FROM users WHERE email = %s", (email,))
         user = cursor.fetchone()
@@ -413,19 +512,18 @@ def resend_verification():
             flash("This email is already verified", "info")
             return redirect(url_for('auth.login'))
 
-        # Create new verification token
         from email_verification import resend_verification_token
         token = resend_verification_token(user['id'], db)
 
         if token:
-            app_url = os.getenv('APP_URL', 'http://127.0.0.1:5000')
+            app_url = os.getenv('APP_URL', 'http://127.0.0.1:5000').rstrip('/')
             verification_link = f"{app_url}/verify-email/{token}"
             success, error_msg = send_resend_verification_email(email, user['full_name'], verification_link)
 
             if success:
                 flash("Verification email sent! Please check your inbox.", "success")
             else:
-                print(f"Warning: Email not sent: {error_msg}")
+                print(f"Warning: Verification email failed: {error_msg}")
                 flash("Error sending email. Please try again later.", "error")
         else:
             flash("Error creating verification token", "error")

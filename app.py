@@ -3,11 +3,11 @@ from routes.home import home
 from routes.auth import auth
 from routes.testimonials import testimonials
 from routes.matching import matching
-import mysql.connector
 from dotenv import load_dotenv
 import os
 from rate_limiter import limiter
 from email_sender import init_email
+from db import init_app_db, get_db_connection
 
 # Load environment variables
 load_dotenv()
@@ -40,24 +40,12 @@ limiter.init_app(app)
 # Initialize email
 init_email(app)
 
+# Initialize database pool & teardown handler
+init_app_db(app)
+
 # Create tables if missing
 from db_init import init_db
 init_db()
-
-# ---------------------------
-# DATABASE CONNECTION SECTION
-# ---------------------------
-def get_db_connection():
-    return mysql.connector.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        database=os.getenv('DB_NAME')
-    )
-
-db = None
-cursor = None
-# ---------------------------
 
 # Register Blueprints
 app.register_blueprint(home)

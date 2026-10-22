@@ -9,12 +9,7 @@ load_dotenv()
 testimonials = Blueprint('testimonials', __name__)
 
 # Database connection
-db = mysql.connector.connect(
-    host=os.getenv('DB_HOST'),
-    user=os.getenv('DB_USER'),
-    password=os.getenv('DB_PASSWORD'),
-    database=os.getenv('DB_NAME')
-)
+from db import db
 
 @testimonials.route("/testimonials", methods=["GET", "POST"])
 def add_testimonial():

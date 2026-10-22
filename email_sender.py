@@ -34,7 +34,7 @@ def _deliver(app, email, subject, html, text):
 
 def _send_async(email, subject, html, text):
     """Send in a background thread so the request returns immediately.
-    Failures are logged, not raised (users can use "resend verification")."""
+    Failures are logged, not raised."""
     import threading
     from flask import current_app
     app = current_app._get_current_object()
@@ -43,17 +43,16 @@ def _send_async(email, subject, html, text):
         try:
             _deliver(app, email, subject, html, text)
         except Exception as e:
-            print(f"Error sending email: {e}")
+            print(f"Error sending email to {email}: {e}")
 
     threading.Thread(target=run, daemon=True).start()
 
 
 def init_email(app):
     """Initialize Flask-Mail with app"""
-    # Configure email settings
     app.config['MAIL_SERVER'] = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
     app.config['MAIL_PORT'] = int(os.getenv('MAIL_PORT', 587))
-    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', True)
+    app.config['MAIL_USE_TLS'] = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
     app.config['MAIL_USERNAME'] = os.getenv('MAIL_USERNAME')
     app.config['MAIL_PASSWORD'] = os.getenv('MAIL_PASSWORD')
     app.config['MAIL_DEFAULT_SENDER'] = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@eastafricanhearts.com')
@@ -63,9 +62,7 @@ def init_email(app):
 
 
 def send_verification_email(email, name, verification_link):
-    """
-    Send email verification link to user
-    """
+    """Send email verification link to user"""
     subject = "Verify Your Email - East African Hearts"
 
     html_body = f"""
@@ -138,9 +135,7 @@ def send_verification_email(email, name, verification_link):
 
 
 def send_resend_verification_email(email, name, verification_link):
-    """
-    Send resend verification email to user
-    """
+    """Send resend verification email to user"""
     subject = "Resend: Verify Your Email - East African Hearts"
 
     html_body = f"""
@@ -180,4 +175,115 @@ def send_resend_verification_email(email, name, verification_link):
         return True, None
     except Exception as e:
         print(f"Error sending email: {e}")
+        return False, str(e)
+
+
+def send_password_reset_email(email, name, reset_link):
+    """Send password reset email to regular user"""
+    subject = "Reset Your Password - East African Hearts"
+
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <h1 style="color: #e91e63; margin-bottom: 20px;">Password Reset Request 🔐</h1>
+
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    Hi <strong>{name}</strong>,
+                </p>
+
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    We received a request to reset your password for East African Hearts. Click the button below to choose a new password:
+                </p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_link}" style="background-color: #e91e63; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+                        Reset Password
+                    </a>
+                </div>
+
+                <p style="font-size: 14px; color: #666; line-height: 1.6;">
+                    Or copy and paste this link in your browser:
+                </p>
+                <p style="font-size: 12px; color: #999; word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                    {reset_link}
+                </p>
+
+                <p style="font-size: 14px; color: #999; margin-top: 20px;">
+                    <strong>Important:</strong> This link is valid for 1 hour. If you did not request a password reset, you can safely ignore this email.
+                </p>
+
+                <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+
+                <p style="font-size: 12px; color: #999; text-align: center;">
+                    © 2026 East African Hearts. All rights reserved.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    text_body = f"""
+    Password Reset Request - East African Hearts
+
+    Hi {name},
+
+    We received a request to reset your password. Use the link below to set a new password:
+    {reset_link}
+
+    This link will expire in 1 hour.
+    If you did not request this, please ignore this email.
+
+    © 2026 East African Hearts. All rights reserved.
+    """
+
+    try:
+        _send_async(email, subject, html_body, text_body)
+        return True, None
+    except Exception as e:
+        print(f"Error sending password reset email: {e}")
+        return False, str(e)
+
+
+def send_admin_password_reset_email(email, username, reset_link):
+    """Send password reset email to administrator"""
+    subject = "Admin Password Reset - East African Hearts"
+
+    html_body = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px;">
+            <div style="max-width: 600px; margin: 0 auto; background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+                <h1 style="color: #2c3e50; margin-bottom: 20px;">Admin Password Reset 🔒</h1>
+
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    Hello <strong>{username}</strong>,
+                </p>
+
+                <p style="font-size: 16px; color: #333; line-height: 1.6;">
+                    A password reset was requested for your administrator account. Click the button below to update your admin credentials:
+                </p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                    <a href="{reset_link}" style="background-color: #2c3e50; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-size: 16px; font-weight: bold; display: inline-block;">
+                        Reset Admin Password
+                    </a>
+                </div>
+
+                <p style="font-size: 12px; color: #999; word-break: break-all; background-color: #f5f5f5; padding: 10px; border-radius: 5px;">
+                    {reset_link}
+                </p>
+
+                <p style="font-size: 14px; color: #e74c3c; margin-top: 20px;">
+                    <strong>Security Warning:</strong> This link expires in 1 hour and can only be used once. If you did not initiate this request, verify your server logs immediately.
+                </p>
+            </div>
+        </body>
+    </html>
+    """
+
+    try:
+        _send_async(email, subject, html_body, None)
+        return True, None
+    except Exception as e:
+        print(f"Error sending admin password reset email: {e}")
         return False, str(e)

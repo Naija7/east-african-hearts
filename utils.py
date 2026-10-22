@@ -92,12 +92,8 @@ def validate_image_file(file_obj, max_size_mb=5):
 
 def log_event(user_id, event_type, details=""):
     try:
-        db = mysql.connector.connect(
-            host=os.getenv('DB_HOST'),
-            user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'),
-            database=os.getenv('DB_NAME')
-        )
+        from db import get_db_connection
+        db = get_db_connection()
         cursor = db.cursor()
         cursor.execute("""
             INSERT INTO logs (user_id, event_type, details, created_at)

@@ -1,6 +1,7 @@
 """Database connection and pooling module for East African Hearts"""
 
 import os
+from urllib.parse import urlparse
 from flask import g, has_app_context
 from werkzeug.local import LocalProxy
 import mysql.connector
@@ -12,20 +13,49 @@ load_dotenv()
 _pool = None
 
 
+def _parse_mysql_url(url):
+    """Parse MySQL URL into connection parameters."""
+    parsed = urlparse(url)
+    return {
+        'host': parsed.hostname,
+        'user': parsed.username,
+        'password': parsed.password,
+        'database': parsed.path.lstrip('/'),
+        'port': parsed.port or 3306
+    }
+
+
+def _get_connection_params():
+    """Get connection parameters from Railway URL or individual env vars."""
+    mysql_url = os.getenv('MYSQL_PRIVATE_URL')
+    if mysql_url:
+        return _parse_mysql_url(mysql_url)
+
+    return {
+        'host': os.getenv('DB_HOST'),
+        'user': os.getenv('DB_USER'),
+        'password': os.getenv('DB_PASSWORD'),
+        'database': os.getenv('DB_NAME'),
+        'port': int(os.getenv('DB_PORT', 3306))
+    }
+
+
 def _get_pool():
     """Lazily initialize and return the MySQL connection pool."""
     global _pool
     if _pool is None:
         try:
             pool_size = int(os.getenv('DB_POOL_SIZE', '5'))
+            params = _get_connection_params()
             _pool = pooling.MySQLConnectionPool(
                 pool_name="eaf_pool",
                 pool_size=pool_size,
                 pool_reset_session=True,
-                host=os.getenv('DB_HOST'),
-                user=os.getenv('DB_USER'),
-                password=os.getenv('DB_PASSWORD'),
-                database=os.getenv('DB_NAME'),
+                host=params['host'],
+                user=params['user'],
+                password=params['password'],
+                database=params['database'],
+                port=params.get('port', 3306),
                 connection_timeout=10
             )
             print("MySQL connection pool initialized successfully")
@@ -46,11 +76,13 @@ def get_db_connection():
         except Exception as e:
             print(f"Pool get_connection failed, falling back to direct connection: {e}")
 
+    params = _get_connection_params()
     return mysql.connector.connect(
-        host=os.getenv('DB_HOST'),
-        user=os.getenv('DB_USER'),
-        password=os.getenv('DB_PASSWORD'),
-        database=os.getenv('DB_NAME'),
+        host=params['host'],
+        user=params['user'],
+        password=params['password'],
+        database=params['database'],
+        port=params.get('port', 3306),
         connection_timeout=10
     )
 

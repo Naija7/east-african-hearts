@@ -29,14 +29,18 @@ def _get_connection_params():
     """Get connection parameters from Railway URL or individual env vars."""
     mysql_url = os.getenv('MYSQL_URL')
     if mysql_url:
-        return _parse_mysql_url(mysql_url)
+        try:
+            return _parse_mysql_url(mysql_url)
+        except Exception as e:
+            print(f"Error parsing MYSQL_URL: {e}")
 
+    port_str = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT') or '3306'
     return {
         'host': os.getenv('DB_HOST') or os.getenv('MYSQL_HOST'),
         'user': os.getenv('DB_USER') or os.getenv('MYSQL_USER'),
         'password': os.getenv('DB_PASSWORD') or os.getenv('MYSQL_PASSWORD'),
         'database': os.getenv('DB_NAME') or os.getenv('MYSQL_DATABASE'),
-        'port': int(os.getenv('DB_PORT') or os.getenv('MYSQL_PORT', 3306))
+        'port': int(port_str)
     }
 
 
@@ -47,6 +51,7 @@ def _get_pool():
         try:
             pool_size = int(os.getenv('DB_POOL_SIZE', '5'))
             params = _get_connection_params()
+            print(f"Attempting to connect to {params['host']}:{params['port']}/{params['database']}")
             _pool = pooling.MySQLConnectionPool(
                 pool_name="eaf_pool",
                 pool_size=pool_size,
@@ -60,7 +65,9 @@ def _get_pool():
             )
             print("MySQL connection pool initialized successfully")
         except Exception as e:
-            print(f"Warning: Failed to initialize MySQL connection pool: {e}")
+            print(f"ERROR: Failed to initialize MySQL connection pool: {e}")
+            import traceback
+            traceback.print_exc()
             _pool = None
     return _pool
 

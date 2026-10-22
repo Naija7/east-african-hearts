@@ -27,12 +27,13 @@ def _parse_mysql_url(url):
 
 def _get_connection_params():
     """Get connection parameters from Railway URL or individual env vars."""
-    mysql_url = os.getenv('MYSQL_URL')
+    # Try private network first (better for Railway internal connections)
+    mysql_url = os.getenv('MYSQL_PRIVATE_URL') or os.getenv('MYSQL_URL')
     if mysql_url:
         try:
             return _parse_mysql_url(mysql_url)
         except Exception as e:
-            print(f"Error parsing MYSQL_URL: {e}")
+            print(f"Error parsing MYSQL URL: {e}")
 
     port_str = os.getenv('DB_PORT') or os.getenv('MYSQL_PORT') or '3306'
     return {

@@ -1,6 +1,7 @@
 """Create all tables if they don't exist. Safe to run on every startup."""
 import os
 import mysql.connector
+from db import get_db_connection
 
 CORE_TABLES = [
 """CREATE TABLE IF NOT EXISTS users (
@@ -116,8 +117,18 @@ EXTRA_TABLES = [
     token VARCHAR(100) UNIQUE NOT NULL,
     expires_at DATETIME NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES admin_users(id)
+    FOREIGN KEY (admin_id) REFERENCES admin_users(id) ON DELETE CASCADE
 )""",
+"""CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    token VARCHAR(100) UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_user (user_id),
+    KEY idx_token (token),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 ]
 
 # Drop order (children first) for replacing the earlier guessed schema
@@ -144,17 +155,26 @@ def _replace_guessed_schema(cur):
 
 
 def init_db():
+    conn = None
+    cur = None
     try:
-        conn = mysql.connector.connect(
-            host=os.getenv('DB_HOST'), user=os.getenv('DB_USER'),
-            password=os.getenv('DB_PASSWORD'), database=os.getenv('DB_NAME'))
+        conn = get_db_connection()
         cur = conn.cursor()
         _replace_guessed_schema(cur)
         for stmt in CORE_TABLES + EXTRA_TABLES:
             cur.execute(stmt)
         conn.commit()
-        cur.close()
-        conn.close()
         print("Database tables ready")
     except Exception as e:
         print(f"Database init failed: {e}")
+    finally:
+        if cur is not None:
+            try:
+                cur.close()
+            except Exception:
+                pass
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass

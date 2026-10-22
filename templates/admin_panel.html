@@ -75,8 +75,14 @@
                                     <td>{{ testimonial.story[:50] }}...</td>
                                     <td>{{ testimonial.created_at.strftime('%Y-%m-%d') if testimonial.created_at else 'N/A' }}</td>
                                     <td class="admin-actions">
-                                        <a href="{{ url_for('auth.approve_testimonial', testimonial_id=testimonial.id) }}" class="btn-small btn-approve">Approve</a>
-                                        <a href="{{ url_for('auth.reject_testimonial', testimonial_id=testimonial.id) }}" class="btn-small btn-reject">Reject</a>
+                                        <form method="POST" action="{{ url_for('auth.approve_testimonial', testimonial_id=testimonial.id) }}" style="display:inline-block; margin-right: 5px;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-small btn-approve" style="border:none; cursor:pointer;">Approve</button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('auth.reject_testimonial', testimonial_id=testimonial.id) }}" style="display:inline-block;">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <button type="submit" class="btn-small btn-reject" style="border:none; cursor:pointer;">Reject</button>
+                                        </form>
                                     </td>
                                 </tr>
                             {% endfor %}

@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
-from utils import compress_image, validate_image_file, get_image_size_mb, log_event
+from utils import compress_image, validate_image_file, get_image_size_mb, log_event, log_error, log_info
 from validators import (validate_email, validate_password, validate_name,
                        validate_age, validate_location, validate_bio,
                        validate_interests, validate_message)
@@ -186,7 +186,7 @@ def register():
 
         except Exception as e:
             db.rollback()
-            print(f"Registration Error: {e}")
+            log_error(f"Registration Error: {e}", exc_info=True, user_id=0)
             flash("Registration failed. Please try again.", "error")
             cursor.close()
 
@@ -337,6 +337,7 @@ def admin_forgot_password():
                 log_event(admin_user['id'], 'ADMIN_PASSWORD_RESET_REQUESTED', username)
             except Exception as e:
                 db.rollback()
+                log_error(f"Admin reset request error: {e}", exc_info=True, user_id=admin_user['id'])
                 flash("Error processing request. Please try again.", "error")
                 print(f"Admin reset request error: {e}")
         else:
@@ -388,6 +389,7 @@ def admin_reset_password(token):
             return redirect(url_for('auth.admin_login'))
         except Exception as e:
             db.rollback()
+            log_error(f"Error resetting admin password: {e}", exc_info=True, user_id=reset_record['admin_id'])
             flash("Error resetting password", "error")
             print(f"Error resetting admin password: {e}")
 

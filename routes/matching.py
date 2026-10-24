@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
 from functools import lru_cache
-from utils import log_event
+from utils import log_event, log_error, log_info
 
 # Load environment variables
 load_dotenv()
@@ -26,7 +26,7 @@ def insert_notification(user_id, actor_id, notification_type, related_id=""):
         db.commit()
         cursor.close()
     except Exception as e:
-        print(f"Notification error: {e}")
+        log_error(f"Notification error for user {user_id}: {e}", exc_info=True, user_id=user_id)
 
 def get_user_notifications(user_id, limit=10):
     try:
@@ -43,7 +43,7 @@ def get_user_notifications(user_id, limit=10):
         cursor.close()
         return notifications
     except Exception as e:
-        print(f"Get notifications error: {e}")
+        log_error(f"Get notifications error for user {user_id}: {e}", exc_info=True, user_id=user_id)
         return []
 
 @matching.route("/discovery")
@@ -220,7 +220,7 @@ def like_profile(liked_user_id):
 
         cursor.close()
     except Exception as e:
-        print(f"Like Error: {e}")
+        log_error(f"Like Error for user {user_id}: {e}", exc_info=True, user_id=user_id)
         flash("Error liking profile", "error")
 
     return redirect(url_for('matching.discovery'))
@@ -246,7 +246,7 @@ def unlike_profile(liked_user_id):
         flash("Profile unliked", "success")
         cursor.close()
     except Exception as e:
-        print(f"Unlike Error: {e}")
+        log_error(f"Unlike Error for user {user_id}: {e}", exc_info=True, user_id=user_id)
         flash("Error unliking profile", "error")
 
     return redirect(url_for('matching.discovery'))
@@ -373,7 +373,7 @@ def send_message(receiver_id):
         flash("Message sent!", "success")
         cursor.close()
     except Exception as e:
-        print(f"Message Error: {e}")
+        log_error(f"Message Error for user {user_id}: {e}", exc_info=True, user_id=user_id)
         flash("Error sending message", "error")
 
     return redirect(url_for('matching.messages', match_user_id=receiver_id))
@@ -402,7 +402,7 @@ def mark_notification_read(notif_id):
         db.commit()
         cursor.close()
     except Exception as e:
-        print(f"Mark read error: {e}")
+        log_error(f"Mark read error for notification {notif_id}: {e}", exc_info=True, user_id=user_id)
 
     return redirect(request.referrer or url_for('matching.notifications'))
 
@@ -419,5 +419,5 @@ def unread_notifications_count():
         cursor.close()
         return jsonify({'count': result[0] if result else 0})
     except Exception as e:
-        print(f"Count error: {e}")
+        log_error(f"Count error for user {user_id}: {e}", exc_info=True, user_id=user_id)
         return jsonify({'count': 0})

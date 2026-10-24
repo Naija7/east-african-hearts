@@ -3,11 +3,42 @@
 from PIL import Image
 import io
 import os
+import traceback
 from datetime import datetime
 import mysql.connector
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Logging functions for structured error handling
+def log_error(msg, exc_info=None, user_id=None):
+    """Log an error with optional exception info"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    error_msg = f"[{timestamp}] ERROR: {msg}"
+    if exc_info:
+        error_msg += f"\n{traceback.format_exc()}"
+    print(error_msg)
+
+    # Also log to database if user_id provided
+    if user_id:
+        log_event(user_id, 'ERROR', msg, level='ERROR')
+
+
+def log_warning(msg, user_id=None):
+    """Log a warning message"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] WARNING: {msg}")
+    if user_id:
+        log_event(user_id, 'WARNING', msg, level='WARNING')
+
+
+def log_info(msg, user_id=None):
+    """Log an info message"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] INFO: {msg}")
+    if user_id:
+        log_event(user_id, 'INFO', msg, level='INFO')
+
 
 def compress_image(image_file, max_width=600, max_height=600, quality=80):
     """
@@ -49,7 +80,7 @@ def compress_image(image_file, max_width=600, max_height=600, quality=80):
         return img_byte_arr.getvalue()
 
     except Exception as e:
-        print(f"Image compression error: {e}")
+        log_error(f"Image compression error: {e}", exc_info=True)
         return None
 
 
@@ -90,7 +121,8 @@ def validate_image_file(file_obj, max_size_mb=5):
     return True, None
 
 
-def log_event(user_id, event_type, details=""):
+def log_event(user_id, event_type, details="", level="INFO"):
+    """Log an event to the database"""
     try:
         from db import get_db_connection
         db = get_db_connection()
@@ -103,4 +135,4 @@ def log_event(user_id, event_type, details=""):
         cursor.close()
         db.close()
     except Exception as e:
-        print(f"Log error: {e}")
+        log_error(f"Failed to log event: {event_type}", exc_info=True)

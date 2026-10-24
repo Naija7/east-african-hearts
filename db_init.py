@@ -129,6 +129,13 @@ EXTRA_TABLES = [
     KEY idx_token (token),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
+"""CREATE TABLE IF NOT EXISTS rate_limits (
+    `key` VARCHAR(255) PRIMARY KEY,
+    count INT DEFAULT 0,
+    reset_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reset_at (reset_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4""",
 ]
 
 # Drop order (children first) for replacing the earlier guessed schema

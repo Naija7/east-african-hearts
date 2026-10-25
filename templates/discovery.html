@@ -72,6 +72,16 @@
                 <div class="profiles-grid">
                     {% for profile in profiles %}
                         <div class="profile-card">
+                            <div class="profile-image">
+                                {% if profile.profile_picture %}
+                                    <img src="data:image/jpeg;base64,{{ profile.profile_picture }}" alt="{{ profile.name }}" class="profile-pic">
+                                {% else %}
+                                    <div class="profile-pic-placeholder">
+                                        <span>📷</span>
+                                        <p>No Photo</p>
+                                    </div>
+                                {% endif %}
+                            </div>
                             <div class="profile-header">
                                 <h3>{{ profile.name }}</h3>
                                 <p class="age-location">{{ profile.age }}, {{ profile.location }}</p>
@@ -110,7 +120,7 @@
                 </div>
             {% else %}
                 <div class="no-profiles">
-                    <p>No profiles available at the moment. Check back later!</p>
+                    <p>😔 No profiles available at the moment. Check back later!</p>
                 </div>
             {% endif %}
 

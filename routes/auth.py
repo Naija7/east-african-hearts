@@ -532,4 +532,102 @@ def resend_verification():
 
         return redirect(url_for('auth.login'))
 
+@auth.route("/profile")
+def view_profile():
+    if 'user_id' not in session:
+        flash("Please login to view your profile", "error")
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+    db = get_db()
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute("""
+        SELECT u.id, u.full_name, u.email, u.age, u.gender, p.bio, p.interests, p.location, p.profile_picture
+        FROM users u
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE u.id = %s
+    """, (user_id,))
+
+    user = cursor.fetchone()
+    cursor.close()
+
+    if not user:
+        flash("User not found", "error")
+        return redirect(url_for('home.index'))
+
+    return render_template("profile.html", user=user, lang=session.get('language', 'en'))
+
+@auth.route("/profile/edit", methods=["GET", "POST"])
+def edit_profile():
+    if 'user_id' not in session:
+        flash("Please login to edit your profile", "error")
+        return redirect(url_for('auth.login'))
+
+    user_id = session['user_id']
+    db = get_db()
+
+    if request.method == "POST":
+        bio = request.form.get("bio", "").strip()
+        interests = request.form.get("interests", "").strip()
+        location = request.form.get("location", "").strip()
+        photo = request.files.get("photo")
+
+        photo_binary = None
+        if photo and photo.filename:
+            is_valid, error = validate_image_file(photo)
+            if not is_valid:
+                flash(error, "error")
+                return redirect(url_for('auth.edit_profile'))
+
+            photo_data = photo.read()
+            size_mb = get_image_size_mb(len(photo_data))
+            if size_mb > 15:
+                flash("Photo must be less than 15MB", "error")
+                return redirect(url_for('auth.edit_profile'))
+
+            photo_binary = compress_image(photo_data)
+
+        cursor = db.cursor()
+        try:
+            if photo_binary:
+                cursor.execute("""
+                    UPDATE profiles
+                    SET bio = %s, interests = %s, location = %s, profile_picture = %s
+                    WHERE user_id = %s
+                """, (bio, interests, location, photo_binary, user_id))
+            else:
+                cursor.execute("""
+                    UPDATE profiles
+                    SET bio = %s, interests = %s, location = %s
+                    WHERE user_id = %s
+                """, (bio, interests, location, user_id))
+
+            db.commit()
+            log_event(user_id, 'PROFILE_UPDATE', 'Profile updated')
+            flash("Profile updated successfully!", "success")
+            return redirect(url_for('auth.view_profile'))
+        except Exception as e:
+            log_error(f"Profile update error for user {user_id}: {e}", exc_info=True, user_id=user_id)
+            flash("Error updating profile. Please try again.", "error")
+        finally:
+            cursor.close()
+
+    cursor = db.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT u.id, u.full_name, u.email, u.age, u.gender, p.bio, p.interests, p.location, p.profile_picture
+        FROM users u
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE u.id = %s
+    """, (user_id,))
+
+    user = cursor.fetchone()
+    cursor.close()
+
+    if not user:
+        flash("User not found", "error")
+        return redirect(url_for('home.index'))
+
+    return render_template("edit_profile.html", user=user, lang=session.get('language', 'en'))
+
     return render_template("resend_verification.html")

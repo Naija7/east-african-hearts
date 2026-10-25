@@ -21,6 +21,7 @@
                 <a href="{{ url_for('matching.notifications') }}" class="nav-link">
                     🔔 Notifications <span class="notification-badge" id="unread-count"></span>
                 </a>
+                <a href="{{ url_for('auth.view_profile') }}" class="nav-link">👤 Profile</a>
                 <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
                 <div class="language-switcher">
                     <a href="{{ url_for('home.set_language', language='en') }}" class="lang-btn {% if lang == 'en' %}active{% endif %}">EN</a>

@@ -3,6 +3,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
+import cloudinary
+import cloudinary.uploader
 from utils import compress_image, validate_image_file, get_image_size_mb, log_event, log_error, log_info
 from validators import (validate_email, validate_password, validate_name,
                        validate_age, validate_location, validate_bio,
@@ -19,6 +21,13 @@ from db import get_db
 
 # Load environment variables
 load_dotenv()
+
+# Configure Cloudinary
+cloudinary.config(
+    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    api_key=os.getenv('CLOUDINARY_API_KEY'),
+    api_secret=os.getenv('CLOUDINARY_API_SECRET')
+)
 
 auth = Blueprint('auth', __name__)
 
@@ -115,23 +124,10 @@ def register():
             flash(f"Interests: {error}", "error")
             return redirect(url_for('auth.register'))
 
-        # Handle photo upload with compression
+        # Handle photo upload - now handled via edit profile with Cloudinary
+        # Registration doesn't store photos anymore, users add them later
         photo_binary = None
-        if 'photo' in request.files:
-            photo_file = request.files['photo']
-            if photo_file.filename != '':
-                is_valid, error_msg = validate_image_file(photo_file, max_size_mb=15)
-                if not is_valid:
-                    flash(error_msg, "error")
-                    return redirect(url_for('auth.register'))
-
-                photo_binary = compress_image(photo_file, max_width=600, max_height=600, quality=80)
-                if photo_binary is None:
-                    flash("Error processing image. Please try again.", "error")
-                    return redirect(url_for('auth.register'))
-
-                size_mb = get_image_size_mb(photo_binary)
-                print(f"Image compressed: {size_mb:.2f}MB")
+        # Cloudinary photos are uploaded via /profile/edit route
 
         db = get_db()
         cursor = db.cursor()
@@ -152,8 +148,9 @@ def register():
             cursor.execute(sql, values)
             user_id = cursor.lastrowid
 
-            profile_sql = "INSERT INTO profiles (user_id, bio, interests, location, profile_picture) VALUES (%s, %s, %s, %s, %s)"
-            profile_values = (user_id, "", interests, location, photo_binary)
+            # Insert profile without photo (NULL) - users add photos via edit profile
+            profile_sql = "INSERT INTO profiles (user_id, bio, interests, location, profile_picture) VALUES (%s, %s, %s, %s, NULL)"
+            profile_values = (user_id, "", interests, location)
             cursor.execute(profile_sql, profile_values)
 
             # Email verification check
@@ -573,7 +570,7 @@ def edit_profile():
         location = request.form.get("location", "").strip()
         photo = request.files.get("photo")
 
-        photo_binary = None
+        photo_url = None
         if photo and photo.filename:
             is_valid, error = validate_image_file(photo)
             if not is_valid:
@@ -586,16 +583,35 @@ def edit_profile():
                 flash("Photo must be less than 15MB", "error")
                 return redirect(url_for('auth.edit_profile'))
 
-            photo_binary = compress_image(photo_data)
+            try:
+                # Upload to Cloudinary
+                result = cloudinary.uploader.upload(
+                    photo_data,
+                    folder="east-african-hearts/profiles",
+                    resource_type="auto",
+                    quality="auto",  # Auto-optimize
+                    width=500,
+                    height=500,
+                    crop="fill",
+                    overwrite=True,
+                    unique_filename=False,
+                    public_id=f"user_{user_id}"
+                )
+                photo_url = result['secure_url']
+                log_info(f"Photo uploaded to Cloudinary for user {user_id}", user_id=user_id)
+            except Exception as e:
+                log_error(f"Cloudinary upload error for user {user_id}: {e}", exc_info=True, user_id=user_id)
+                flash("Error uploading photo. Please try again.", "error")
+                return redirect(url_for('auth.edit_profile'))
 
         cursor = db.cursor()
         try:
-            if photo_binary:
+            if photo_url:
                 cursor.execute("""
                     UPDATE profiles
                     SET bio = %s, interests = %s, location = %s, profile_picture = %s
                     WHERE user_id = %s
-                """, (bio, interests, location, photo_binary, user_id))
+                """, (bio, interests, location, photo_url, user_id))
             else:
                 cursor.execute("""
                     UPDATE profiles

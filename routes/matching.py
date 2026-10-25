@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 import os
 from functools import lru_cache
 from utils import log_event, log_error, log_info
+from cache_helper import ProfileCache
 
 # Load environment variables
 load_dotenv()
@@ -12,9 +13,6 @@ load_dotenv()
 matching = Blueprint('matching', __name__)
 
 from db import db
-
-# Simple cache for discovery page
-_cache = {'data': None, 'timestamp': None}
 
 def insert_notification(user_id, actor_id, notification_type, related_id=""):
     try:
@@ -55,11 +53,11 @@ def discovery():
     user_id = session['user_id']
     language = session.get('language', 'en')
 
-    # Check cache (30 second TTL). The cache holds ALL users; the viewer is
-    # filtered out per request so one user's id never shapes everyone's list.
-    if _cache['data'] and _cache['timestamp'] and datetime.now() - _cache['timestamp'] < timedelta(seconds=30):
-        profiles = _cache['data']
-    else:
+    # Try to get cached profiles
+    profiles = ProfileCache.get(db)
+
+    # If cache miss, fetch from database
+    if not profiles:
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
             SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location, p.profile_picture
@@ -72,9 +70,9 @@ def discovery():
         cursor.close()
 
         # Cache the results
-        _cache['data'] = profiles
-        _cache['timestamp'] = datetime.now()
+        ProfileCache.set(db, profiles)
 
+    # Filter out current user and limit to 50
     profiles = [p for p in profiles if p['id'] != user_id][:50]
 
     # Get user's likes

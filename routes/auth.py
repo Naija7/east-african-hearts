@@ -3,8 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 import os
-import cloudinary
-import cloudinary.uploader
+import base64
 from utils import compress_image, validate_image_file, get_image_size_mb, log_event, log_error, log_info
 from validators import (validate_email, validate_password, validate_name,
                        validate_age, validate_location, validate_bio,
@@ -21,13 +20,6 @@ from db import get_db
 
 # Load environment variables
 load_dotenv()
-
-# Configure Cloudinary
-cloudinary.config(
-    cloud_name=os.getenv('CLOUDINARY_CLOUD_NAME'),
-    api_key=os.getenv('CLOUDINARY_API_KEY'),
-    api_secret=os.getenv('CLOUDINARY_API_SECRET')
-)
 
 auth = Blueprint('auth', __name__)
 
@@ -570,7 +562,7 @@ def edit_profile():
         location = request.form.get("location", "").strip()
         photo = request.files.get("photo")
 
-        photo_url = None
+        photo_base64 = None
         if photo and photo.filename:
             is_valid, error = validate_image_file(photo)
             if not is_valid:
@@ -584,34 +576,29 @@ def edit_profile():
                 return redirect(url_for('auth.edit_profile'))
 
             try:
-                # Upload to Cloudinary
-                result = cloudinary.uploader.upload(
-                    photo_data,
-                    folder="east-african-hearts/profiles",
-                    resource_type="auto",
-                    quality="auto",  # Auto-optimize
-                    width=500,
-                    height=500,
-                    crop="fill",
-                    overwrite=True,
-                    unique_filename=False,
-                    public_id=f"user_{user_id}"
-                )
-                photo_url = result['secure_url']
-                log_info(f"Photo uploaded to Cloudinary for user {user_id}", user_id=user_id)
+                # Compress image first
+                compressed = compress_image(photo_data)
+
+                # Convert to Base64
+                photo_base64 = base64.b64encode(compressed).decode('utf-8')
+
+                # Add data URI prefix for direct display
+                photo_base64 = f"data:image/jpeg;base64,{photo_base64}"
+
+                log_info(f"Photo converted to Base64 for user {user_id}", user_id=user_id)
             except Exception as e:
-                log_error(f"Cloudinary upload error for user {user_id}: {e}", exc_info=True, user_id=user_id)
-                flash("Error uploading photo. Please try again.", "error")
+                log_error(f"Photo processing error for user {user_id}: {e}", exc_info=True, user_id=user_id)
+                flash("Error processing photo. Please try again.", "error")
                 return redirect(url_for('auth.edit_profile'))
 
         cursor = db.cursor()
         try:
-            if photo_url:
+            if photo_base64:
                 cursor.execute("""
                     UPDATE profiles
                     SET bio = %s, interests = %s, location = %s, profile_picture = %s
                     WHERE user_id = %s
-                """, (bio, interests, location, photo_url, user_id))
+                """, (bio, interests, location, photo_base64, user_id))
             else:
                 cursor.execute("""
                     UPDATE profiles

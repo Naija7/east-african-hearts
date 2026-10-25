@@ -1,5 +1,5 @@
 """
-Database migration: Convert BLOB photos to Cloudinary URLs + add cache table
+Database migration: Convert BLOB photos to Base64 strings in MySQL + add cache table
 Run this BEFORE deploying the code changes
 """
 import mysql.connector
@@ -12,12 +12,12 @@ def migrate():
     try:
         print("Starting database migration...")
 
-        # Step 1: Modify profiles table - change profile_picture from BLOB to VARCHAR
+        # Step 1: Modify profiles table - change profile_picture from BLOB to LONGTEXT
         print("1. Modifying profiles table...")
-        cursor.execute("ALTER TABLE profiles MODIFY COLUMN profile_picture VARCHAR(500)")
-        print("   ✅ Changed profile_picture column to VARCHAR(500)")
+        cursor.execute("ALTER TABLE profiles MODIFY COLUMN profile_picture LONGTEXT")
+        print("   ✅ Changed profile_picture column to LONGTEXT (for Base64 strings)")
 
-        # Step 2: Clear existing photos (fresh start with Cloudinary)
+        # Step 2: Clear existing photos (fresh start with Base64)
         print("2. Clearing existing photos...")
         cursor.execute("UPDATE profiles SET profile_picture = NULL")
         print(f"   ✅ Cleared photos (affected rows: {cursor.rowcount})")
@@ -37,10 +37,10 @@ def migrate():
         db.commit()
         print("\n✅ Migration completed successfully!")
         print("\nNext steps:")
-        print("1. Install Cloudinary: pip install cloudinary")
-        print("2. Add Cloudinary env vars: CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET")
-        print("3. Deploy updated code")
-        print("4. Users can re-upload their photos")
+        print("1. Deploy updated code")
+        print("2. Users can upload photos in their profile")
+        print("3. Photos stored as Base64 in MySQL")
+        print("4. Discovery page uses PostgreSQL cache for speed")
 
     except mysql.connector.Error as e:
         print(f"❌ Database error: {e}")

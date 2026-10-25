@@ -151,14 +151,6 @@
         </section>
     </main>
 
-    <footer>
-        <p>&copy; 2026 East African Hearts. All rights reserved.</p>
-        <div class="footer-links">
-            <a href="{{ url_for('home.about') }}">{{ t.about }}</a>
-            <a href="#">Privacy Policy</a>
-            <a href="#">Terms of Service</a>
-            <a href="#">Contact Us</a>
-        </div>
-    </footer>
+    {% include 'footer.html' %}
 </body>
 </html>

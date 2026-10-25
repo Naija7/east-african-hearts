@@ -26,3 +26,13 @@ def set_language(language):
     if language in TRANSLATIONS:
         session['language'] = language
     return redirect(request.referrer or url_for('home.index'))
+
+@home.route("/privacy-policy")
+def privacy_policy():
+    language = session.get('language', 'en')
+    return render_template("privacy_policy.html", lang=language)
+
+@home.route("/terms-of-service")
+def terms_of_service():
+    language = session.get('language', 'en')
+    return render_template("terms_of_service.html", lang=language)

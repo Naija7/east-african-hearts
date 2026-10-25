@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - East African Hearts</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="logo-section">
+                <img src="{{ url_for('static', filename='logo.svg') }}" alt="East African Hearts Logo" class="logo">
+                <h1 class="brand-name">East African Hearts</h1>
+            </div>
+            <nav class="nav-links">
+                <a href="{{ url_for('home.index') }}" class="nav-link">Home</a>
+                <a href="{{ url_for('home.about') }}" class="nav-link">About</a>
+                {% if session.get('user_id') %}
+                    <a href="{{ url_for('matching.discovery') }}" class="nav-link">Discovery</a>
+                    <a href="{{ url_for('auth.logout') }}" class="nav-link">Logout</a>
+                {% else %}
+                    <a href="{{ url_for('auth.login') }}" class="nav-link">Login</a>
+                    <a href="{{ url_for('auth.register') }}" class="nav-link">Register</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="legal-container">
+            <div class="legal-content">
+                <h1>Privacy Policy</h1>
+                <p class="last-updated">Last Updated: October 2026</p>
+
+                <h2>1. Introduction</h2>
+                <p>East African Hearts ("we," "us," or "our") operates the East African Hearts dating platform. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our website and mobile application.</p>
+
+                <h2>2. Information We Collect</h2>
+                <p>We collect information you provide directly to us, such as:</p>
+                <ul>
+                    <li>Account registration information (name, email, age, gender)</li>
+                    <li>Profile information (bio, interests, location, profile photos)</li>
+                    <li>Messages and communications between users</li>
+                    <li>Payment information (if applicable)</li>
+                    <li>Support correspondence</li>
+                </ul>
+
+                <h2>3. How We Use Your Information</h2>
+                <p>We use the collected information for:</p>
+                <ul>
+                    <li>Providing and improving our dating service</li>
+                    <li>Personalizing user experience</li>
+                    <li>Sending promotional communications (with your consent)</li>
+                    <li>Preventing fraudulent activity and violations of our Terms</li>
+                    <li>Legal compliance</li>
+                </ul>
+
+                <h2>4. Data Security</h2>
+                <p>We implement appropriate technical and organizational measures to protect your personal information. However, no security system is impenetrable. We recommend using strong passwords and not sharing your account credentials.</p>
+
+                <h2>5. Third-Party Sharing</h2>
+                <p>We do not sell your personal information. We may share information with:</p>
+                <ul>
+                    <li>Service providers who assist us in operating the platform</li>
+                    <li>Law enforcement when required by law</li>
+                </ul>
+
+                <h2>6. User Rights</h2>
+                <p>You have the right to:</p>
+                <ul>
+                    <li>Access your personal information</li>
+                    <li>Request correction of inaccurate information</li>
+                    <li>Request deletion of your account and data</li>
+                    <li>Opt-out of marketing communications</li>
+                </ul>
+
+                <h2>7. Contact Us</h2>
+                <p>If you have questions about this Privacy Policy, please contact us at: <a href="mailto:privacy@eastafricanhearts.com">privacy@eastafricanhearts.com</a></p>
+            </div>
+        </div>
+    </main>
+
+    {% include 'footer.html' %}
+
+    <style>
+        .legal-container {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 2rem;
+        }
+
+        .legal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .legal-content h1 {
+            color: #e91e63;
+            margin-bottom: 0.5rem;
+        }
+
+        .last-updated {
+            color: #999;
+            font-style: italic;
+            margin-bottom: 2rem;
+        }
+
+        .legal-content h2 {
+            color: #333;
+            font-size: 1.3rem;
+            margin-top: 2rem;
+            margin-bottom: 1rem;
+        }
+
+        .legal-content p {
+            color: #555;
+            line-height: 1.8;
+            margin-bottom: 1rem;
+        }
+
+        .legal-content ul {
+            color: #555;
+            margin-left: 2rem;
+            margin-bottom: 1rem;
+            line-height: 1.8;
+        }
+
+        .legal-content li {
+            margin-bottom: 0.5rem;
+        }
+
+        .legal-content a {
+            color: #e91e63;
+            text-decoration: none;
+        }
+
+        .legal-content a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .legal-container {
+                padding: 0 1rem;
+            }
+
+            .legal-content {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</body>
+</html>

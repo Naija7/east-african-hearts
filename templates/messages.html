@@ -32,8 +32,15 @@
             <div class="message-header">
                 <a href="{{ url_for('matching.matches') }}" class="back-link">← Back to Matches</a>
                 <div class="chat-with">
-                    <h2>{{ match_user.name }}</h2>
-                    <p class="user-info">{{ match_user.age }}, {{ match_user.location }}</p>
+                    {% if match_user.profile_picture %}
+                        <img src="data:image/jpeg;base64,{{ match_user.profile_picture }}" alt="{{ match_user.name }}" class="message-header-photo">
+                    {% else %}
+                        <div class="message-header-photo-placeholder">📷</div>
+                    {% endif %}
+                    <div class="chat-user-info">
+                        <h2>{{ match_user.name }}</h2>
+                        <p class="user-info">{{ match_user.age }}, {{ match_user.location }}</p>
+                    </div>
                 </div>
             </div>
 

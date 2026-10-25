@@ -62,7 +62,7 @@ def discovery():
     else:
         cursor = db.cursor(dictionary=True)
         cursor.execute("""
-            SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location
+            SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location, p.profile_picture
             FROM users u
             LEFT JOIN profiles p ON u.id = p.user_id
             ORDER BY u.created_at DESC
@@ -113,7 +113,7 @@ def search():
     cursor = db.cursor(dictionary=True)
 
     query = """
-        SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location
+        SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.interests, p.location, p.profile_picture
         FROM users u
         LEFT JOIN profiles p ON u.id = p.user_id
         WHERE u.id != %s
@@ -264,7 +264,7 @@ def matches():
 
     # Get all matches
     cursor.execute("""
-        SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.location
+        SELECT u.id, u.full_name as name, u.age, u.gender, p.bio, p.location, p.profile_picture
         FROM matches m
         JOIN users u ON (
             (m.user1_id = %s AND u.id = m.user2_id) OR
@@ -309,7 +309,12 @@ def messages(match_user_id):
     match_id = match['id']
 
     # Get match user info
-    cursor.execute("SELECT id, full_name as name, age, location FROM users WHERE id = %s", (match_user_id,))
+    cursor.execute("""
+        SELECT u.id, u.full_name as name, u.age, p.location, p.profile_picture
+        FROM users u
+        LEFT JOIN profiles p ON u.id = p.user_id
+        WHERE u.id = %s
+    """, (match_user_id,))
     match_user = cursor.fetchone()
 
     # Get messages

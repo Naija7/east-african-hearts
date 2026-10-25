@@ -1134,6 +1134,43 @@ form input[type="file"] {
 }
 
 .chat-with {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    flex: 1;
+}
+
+.message-header-photo {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #667eea;
+}
+
+.message-header-photo-placeholder {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    border: 2px solid #ddd;
+}
+
+.chat-user-info {
+    flex: 1;
+}
+
+.chat-user-info h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+}
+
+.chat-with {
     flex-grow: 1;
 }
 

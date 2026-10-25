@@ -14,8 +14,12 @@
             <ul class="footer-list">
                 <li><a href="{{ url_for('home.index') }}">Home</a></li>
                 <li><a href="{{ url_for('home.about') }}">About Us</a></li>
-                <li><a href="{{ url_for('testimonials.view_testimonials') }}">Success Stories</a></li>
-                <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                <li><a href="{{ url_for('testimonials.view_testimonials') }}" title="Success Stories">Success Stories</a></li>
+                {% if session.get('user_id') %}
+                    <li><a href="{{ url_for('matching.discovery') }}">Discovery</a></li>
+                {% else %}
+                    <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+                {% endif %}
             </ul>
         </div>
         <div class="footer-section">
